@@ -171,7 +171,7 @@ elif prediction_layers == "tf.layers.dense AND single tf.layers.dropout":
     predictions = tf.layers.dense(inputs=hidden_1, units=num_classes, activation=tf.nn.relu)
 else:
     predictions = get_predictions(outputs)
-predictions = tf.Print(input_=predictions, data=[predictions], message="Predictions", summarize=10)
+predictions = tf.Print(input_=predictions, data=[predictions], message="Predictions", summarize=100)
 print("Predictions")
 
 # Loss
@@ -185,15 +185,19 @@ else:
     loss = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=predictions)
     loss *= mask
     loss *= rmdmask
-loss = tf.Print(input_=loss, data=[loss], message="Loss", first_n=50)
+# loss = tf.Print(input_=loss, data=[loss], message="Loss", first_n=50)
 print("Loss")
 
 # Optimizer
 optimizer = tf.train.AdamOptimizer(learning_rate=learn_rate).minimize(loss)
 print("Optimizer")
 
-correct_pred = tf.equal(tf.cast(tf.round(predictions), tf.float32), labels) # argmax statt round
+preds = tf.round(predictions)
+preds = tf.Print(input_=preds, data=[preds], message="Preds", summarize=100)
+correct_pred = tf.equal(tf.cast(preds, tf.float32), labels) # argmax statt round
+correct_pred = tf.Print(input_=correct_pred, data=[correct_pred], message="Correct Pred", summarize=100)
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+accuracy = tf.Print(input_=accuracy, data=[accuracy], message="Accuracy", summarize=100)
 print("Accuracy")
 
 # Initialise variables
