@@ -1,2 +1,6 @@
-model_checkpoint_path: "20180610-160739.ckpt-14"
-all_model_checkpoint_paths: "20180610-160739.ckpt-14"
+model_checkpoint_path: "20180610-203426.ckpt-299"
+all_model_checkpoint_paths: "20180610-203426.ckpt-295"
+all_model_checkpoint_paths: "20180610-203426.ckpt-296"
+all_model_checkpoint_paths: "20180610-203426.ckpt-297"
+all_model_checkpoint_paths: "20180610-203426.ckpt-298"
+all_model_checkpoint_paths: "20180610-203426.ckpt-299"

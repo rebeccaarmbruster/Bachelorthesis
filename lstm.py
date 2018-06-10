@@ -22,11 +22,11 @@ path_to_results_file = "./results"
 path_to_saved_models = "./saved-models"
 
 # Parameters
-lstm_units = 50 # nur zu Testzwecken, um Verwirrungen mit mb_size zu verhindern -> Ursprungswert: 100
+lstm_units = 100
 lstm_layers = 2
 dense_units = 500
 dense_layers = 2
-num_epochs = 15
+num_epochs = 300
 learn_rate = 0.001
 mb_size = 100
 l2reg = 0.0
@@ -35,7 +35,7 @@ rng_seed = 364
 dropout_wrapper = True
 prediction_layers = "tf.layers.dense AND all tf.layers.dropout"
 los_seq_mask = False
-shuffle = False
+shuffle = True
 keep_prob = 0.5
 training = True
 
@@ -129,7 +129,7 @@ rmdmask = tf.placeholder(tf.float32, [mb_size, branch_length])
 # LSTM Cell
 def lstm_cell():
     lstm_cell = tf.contrib.rnn.BasicLSTMCell(lstm_units)
-    if dropout_wrapper: # Semantischer Fehler true/false
+    if dropout_wrapper:
         return tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob=keep_prob)
     else:
         return lstm_cell
@@ -147,42 +147,43 @@ outputs, final_state = tf.nn.dynamic_rnn(cells, inputs, dtype=tf.float32, initia
 # outputs, final_state = tf.nn.dynamic_rnn(lstm_cell, x_train, dtype=tf.float32)
 print("Outputs, FinalState")
 
-# Predictions
+# Scores
 if prediction_layers == "tf.layers.dense":
     hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu)
     hidden_2 = tf.layers.dense(inputs=hidden_1, units=num_classes, activation=tf.nn.relu)
 
 elif prediction_layers == "test":
     hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu, use_bias=True)
-    predictions = tf.layers.dense(inputs=hidden_1, units=num_classes, activation=tf.nn.relu, use_bias=True)
+    scores = tf.layers.dense(inputs=hidden_1, units=num_classes, activation=tf.nn.relu, use_bias=True)
 
 elif prediction_layers == "tf.contrib.layers.fully_connected":
-    predictions = tf.contrib.layers.fully_connected(inputs=outputs, num_outputs=num_classes, activation_fn=tf.nn.relu)
+    scores = tf.contrib.layers.fully_connected(inputs=outputs, num_outputs=num_classes, activation_fn=tf.nn.relu)
 
 elif prediction_layers == "tf.layers.dense AND all tf.layers.dropout":
     X_drop = tf.layers.dropout(inputs=outputs, rate=keep_prob, training=training)
-    hidden_1 = tf.layers.dense(inputs=X_drop, units=dense_units, activation=tf.nn.relu, use_bias=True)
+    hidden_1 = tf.layers.dense(inputs=X_drop, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
     hidden_1_drop = tf.layers.dropout(inputs=hidden_1, rate=keep_prob, training=training)
-    hidden_2 = tf.layers.dense(inputs=hidden_1_drop, units=num_classes, activation=tf.nn.relu, use_bias=True)
-    predictions = tf.layers.dropout(hidden_2, rate=keep_prob, training=training)
+    hidden_2 = tf.layers.dense(inputs=hidden_1_drop, units=num_classes, activation=tf.nn.relu, use_bias=True, trainable=training)
+    scores = tf.layers.dropout(hidden_2, rate=keep_prob, training=training)
 
 elif prediction_layers == "tf.layers.dense AND single tf.layers.dropout":
     hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu)
-    predictions = tf.layers.dense(inputs=hidden_1, units=num_classes, activation=tf.nn.relu)
+    hidden_1_drop = tf.layers.dropout(inputs=hidden_1, rate=keep_prob, training=training)
+    scores = tf.layers.dense(inputs=hidden_1_drop, units=num_classes, activation=tf.nn.relu)
 else:
-    predictions = get_predictions(outputs)
-predictions = tf.Print(input_=predictions, data=[predictions], message="Predictions", summarize=100)
-print("Predictions")
+    scores = get_predictions(outputs)
+scores = tf.Print(input_=scores, data=[scores], message="Scores", summarize=100)
+print("Scores")
 
 # Loss
 if los_seq_mask:
     # mask = tf.sequence_mask(maxlen=mb_size, lengths=branch_length, dtype=tf.float32)
-    loss = cost(predictions=predictions, labels=labels)
+    loss = cost(predictions=scores, labels=labels)
     loss *= mask
     loss *= rmdmask
     # loss = tf.Print(input_=loss, data=[loss], message="Loss", first_n=50)
 else:
-    loss = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=predictions)
+    loss = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=scores)
     loss *= mask
     loss *= rmdmask
 # loss = tf.Print(input_=loss, data=[loss], message="Loss", first_n=50)
@@ -192,13 +193,38 @@ print("Loss")
 optimizer = tf.train.AdamOptimizer(learning_rate=learn_rate).minimize(loss)
 print("Optimizer")
 
-preds = tf.round(predictions)
-preds = tf.Print(input_=preds, data=[preds], message="Preds", summarize=100)
-correct_pred = tf.equal(tf.cast(preds, tf.float32), labels) # argmax statt round
+predictions = tf.argmax(scores, 1)
+predictions = tf.Print(input_=predictions, data=[predictions], message="Predictions", summarize=100)
+# correct_pred = tf.equal(tf.cast(predictions, tf.float32), labels)
+correct_pred = tf.equal(predictions, tf.argmax(labels, 21))
 correct_pred = tf.Print(input_=correct_pred, data=[correct_pred], message="Correct Pred", summarize=100)
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 accuracy = tf.Print(input_=accuracy, data=[accuracy], message="Accuracy", summarize=100)
 print("Accuracy")
+
+# Prepare files for results and saved models
+result_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".txt")
+results = os.path.join(path_to_results_file, result_file).replace(os.path.sep, '/')
+saved_model_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".ckpt")
+save_path = os.path.join(path_to_saved_models, saved_model_file).replace(os.path.sep, '/')
+
+result_file_loss_run_train = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-loss-run-train" + ".txt")
+result_file_loss_eval_train = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-loss-eval-train" + ".txt")
+result_file_acc_train = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-acc-train" + ".txt")
+
+results_loss_run_train = os.path.join(path_to_results_file, result_file_loss_run_train).replace(os.path.sep, '/')
+results_loss_eval_train = os.path.join(path_to_results_file, result_file_loss_eval_train).replace(os.path.sep, '/')
+results_acc_train = os.path.join(path_to_results_file, result_file_acc_train).replace(os.path.sep, '/')
+
+result_file_loss_run_dev = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-loss-run-dev" + ".txt")
+result_file_loss_eval_dev = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-loss-eval-dev" + ".txt")
+result_file_acc_dev = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-acc-dev" + ".txt")
+
+results_loss_run_dev = os.path.join(path_to_results_file, result_file_loss_run_dev).replace(os.path.sep, '/')
+results_loss_eval_dev = os.path.join(path_to_results_file, result_file_loss_eval_dev).replace(os.path.sep, '/')
+results_acc_dev = os.path.join(path_to_results_file, result_file_acc_dev).replace(os.path.sep, '/')
+
+write_parameters(results)
 
 # Initialise variables
 init = tf.global_variables_initializer()
@@ -209,71 +235,83 @@ with tf.Session() as sess:
     init.run()
     saver = tf.train.Saver()
 
-    result_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".txt")
-    results = os.path.join(path_to_results_file, result_file).replace(os.path.sep, '/')
-    saved_model_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".ckpt")
-    saved_model = os.path.join(path_to_saved_models, saved_model_file).replace(os.path.sep, '/')
 
-    write_parameters(results)
-
-    # for epoch in num_epochs:
     for epoch in range(num_epochs):
         start_epoch_time = time.time()
-        print(">>EPOCH: " + str(epoch + 1) + "/" + str(num_epochs) + " <<")
+        print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<")
         with open(results, 'a') as out:
-            print(">> EPOCH: " + str(epoch + 1) + " <<", file=out)
-        for batch in get_batches(x_train, y_train, mask_train, rmdoublemask_train, mb_size, shuffle):
-            x_batch, y_batch, mask_batch, rmdmask_batch = batch
-            o, l, p = sess.run([optimizer, loss, predictions], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmdmask_batch}) # ausgeben und speichern
-            mse = loss.eval(feed_dict={inputs: x_batch, labels:y_batch, mask: mask_batch, rmdmask: rmdmask_batch}) # ausgeben und speichern
-            with open(results, 'a') as out:
-                print("Accuracy for this batch: ", sess.run(accuracy, {inputs:x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmdmask_batch}), file=out)
-            if (epoch + 1 % saving == 0 and epoch != 0):
-                print("Model should save")
-                with open(results, 'a') as out:
-                    print("Model should save", file=out)
-                save_path = saver.save(sess, saved_model, global_step=epoch)
-                save_path = saver.save(sess, "models/pretrained_lstm.ckpt")
-                with open(results, 'a') as out:
-                    print("Saved to %s" % save_path)
-                    print("Saved to %s" % save_path, file=out)
+            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        with open(results_loss_run_train, 'a') as out:
+            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        with open(results_loss_eval_train, 'a') as out:
+            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        with open(results_acc_train, 'a') as out:
+            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        with open(results_loss_run_dev, 'a') as out:
+            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        with open(results_loss_eval_dev, 'a') as out:
+            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        with open(results_acc_dev, 'a') as out:
+            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        for batch in get_batches(x=x_train, y=y_train, mask=mask_train, rmd=rmdoublemask_train, mb_size=mb_size, shuffle=shuffle):
+            x_batch, y_batch, mask_batch, rmd_batch = batch
+            sess.run(fetches=optimizer, feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            accuracy_run, loss_run = sess.run([accuracy, loss], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            with open(results_loss_run_train, 'a') as out:
+                print("Loss (Run) for this batch: ", np.average(loss_run), file=out)
+            with open(results_loss_eval_train, 'a') as out:
+                print("Loss (Eval) for this batch: ", np.average(loss_eval), file=out)
+            with open(results_acc_train, 'a') as out:
+                print("Accuracy for this batch: ", accuracy_run, file=out)
+        print("Save model")
+        with open(results, 'a') as out:
+            print("Save model", file=out)
+        saved = saver.save(sess=sess, save_path=save_path, global_step=epoch)
+        # Evaluation on dev data
+        training = False
+        print("Start evaluation on dev data")
+        with open(results, 'a') as out:
+            print("-----------------------\nStart evaluation on dev data", file=out)
+        with open(results_loss_run_train, 'a') as out:
+            print("-----------------------\nStart evaluation on dev data", file=out)
+        with open(results_loss_eval_train, 'a') as out:
+            print("-----------------------\nStart evaluation on dev data", file=out)
+        with open(results_acc_train, 'a') as out:
+            print("-----------------------\nStart evaluation on dev data", file=out)
+        with open(results_loss_run_dev, 'a') as out:
+            print("-----------------------\nStart evaluation on dev data", file=out)
+        with open(results_loss_eval_dev, 'a') as out:
+            print("-----------------------\nStart evaluation on dev data", file=out)
+        with open(results_acc_dev, 'a') as out:
+            print("-----------------------\nStart evaluation on dev data", file=out)
+        # saver.restore(sess=sess, save_path=save_path)
+        saver.restore(sess=sess, save_path=tf.train.latest_checkpoint(path_to_saved_models))
+        for batch in get_batches(x=x_dev, y=y_dev, mask=mask_dev, rmd=rmdoublemask_dev, mb_size=mb_size, shuffle=shuffle):
+            x_batch, y_batch, mask_batch, rmd_batch = batch
+            accuracy_run, optimizer_run, loss_run = sess.run([accuracy, optimizer, loss], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            with open(results_loss_run_dev, 'a') as out:
+                print("Loss (Run) for this batch: ", np.average(loss_run), file=out)
+            with open(results_loss_eval_dev, 'a') as out:
+                print("Loss (Eval) for this batch: ", np.average(loss_eval), file=out)
+            with open(results_acc_dev, 'a') as out:
+                print("Accuracy for this batch: ", accuracy_run, file=out)
+        training = True
         stop_epoch_time = time.time()
         stop_epoch_time = stop_epoch_time - start_epoch_time
         with open(results, 'a') as out:
-            print("Epoch time: " + str(stop_epoch_time) + "\n-------------------------------------------------------", file=out)
-#
-    print("Model should saveOuter")
-    with open(results, 'a') as out:
-        print("Model should saveOuter", file=out)
-    save_path = saver.save(sess, saved_model, global_step=epoch)
-    save_path = saver.save(sess, "models/pretrained_lstm.ckpt")
-    with open(results, 'a') as out:
-        print("OuterSaved to %s" % save_path)
-        print("outerSaved to %s" % save_path, file=out)
-    print("Training completed, prediction starts")
-#
-with open(results, 'a') as out:
-    print("Training completed, prediction starts\n-------------------------------------------------------", file=out)
-
-training = False
-
-start_pred_time = time.time()
-
-with tf.Session() as sess:
-    saver = tf.train.Saver()
-    # saver.restore(sess, saved_model)
-    saver.restore(sess, tf.train.latest_checkpoint(path_to_saved_models))
-    for iter in range(iterations):
-        # for batch in get_batches(x_dev, y_dev, mb_size):
-        for batch in get_batches(x_dev, y_dev, mask_dev, rmdoublemask_dev, mb_size, shuffle):
-            x_batch, y_batch, mask_batch, rmdmask_batch = batch
-            with open(results, 'a') as out:
-                print("Accuracy for this batch: ", sess.run(accuracy, {inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmdmask_batch}), file=out)
-
-stop_pred_time = time.time()
-stop_pred_time = stop_pred_time - start_pred_time
-
-with open(results, 'a') as  out:
-    print("Prediction time: " + str(stop_pred_time), file=out)
-
-print("Done")
+            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+        with open(results_loss_run_train, 'a') as out:
+            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+        with open(results_loss_eval_train, 'a') as out:
+            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+        with open(results_acc_train, 'a') as out:
+            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+        with open(results_loss_run_dev, 'a') as out:
+            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+        with open(results_loss_eval_dev, 'a') as out:
+            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+        with open(results_acc_dev, 'a') as out:
+            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+    print("Done")
