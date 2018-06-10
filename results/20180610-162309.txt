@@ -1,0 +1,197 @@
+LSTM Units: 50
+LSTM Layers: 2
+Dense Units: 500
+Dense Layers: 2
+Num epochs: 15
+Learn rate: 0.001
+Batch size: 100
+L2 Reg: 0.0
+RNG Seed: 364
+Dropout Wrapper: True
+Several dense layers: tf.layers.dense AND all tf.layers.dropout
+Loss via sequence mask: False
+Shuffle: False
+Keep prob: 0.5
+Iterations: 5
+Savings iterations: 5
+-------------------------------------------------------
+>> EPOCH: 1 <<
+Accuracy for this batch:  0.01
+Accuracy for this batch:  0.0398
+Accuracy for this batch:  0.0799
+Accuracy for this batch:  0.171
+Accuracy for this batch:  0.14
+Accuracy for this batch:  0.272
+Accuracy for this batch:  0.2099
+Accuracy for this batch:  0.2895
+Accuracy for this batch:  0.3692
+Accuracy for this batch:  0.3489
+Accuracy for this batch:  0.3496
+Accuracy for this batch:  0.3571
+Accuracy for this batch:  0.3129
+Accuracy for this batch:  0.3947
+Accuracy for this batch:  0.3899
+Accuracy for this batch:  0.4412
+Accuracy for this batch:  0.4573
+Accuracy for this batch:  0.3959
+Accuracy for this batch:  0.5145
+Accuracy for this batch:  0.4186
+Accuracy for this batch:  0.4684
+Accuracy for this batch:  0.5147
+Accuracy for this batch:  0.4863
+Accuracy for this batch:  0.5276
+Accuracy for this batch:  0.5386
+Accuracy for this batch:  0.519
+Accuracy for this batch:  0.5022
+Accuracy for this batch:  0.5391
+Accuracy for this batch:  0.5172
+Accuracy for this batch:  0.5489
+Epoch time: 4.640167951583862
+-------------------------------------------------------
+>> EPOCH: 2 <<
+Accuracy for this batch:  0.5277
+Accuracy for this batch:  0.5356
+Accuracy for this batch:  0.5789
+Accuracy for this batch:  0.5292
+Accuracy for this batch:  0.556
+Accuracy for this batch:  0.5359
+Accuracy for this batch:  0.5497
+Accuracy for this batch:  0.5376
+Accuracy for this batch:  0.4778
+Accuracy for this batch:  0.5066
+Accuracy for this batch:  0.4958
+Accuracy for this batch:  0.5764
+Accuracy for this batch:  0.6004
+Accuracy for this batch:  0.6037
+Accuracy for this batch:  0.5849
+Accuracy for this batch:  0.583
+Accuracy for this batch:  0.5662
+Accuracy for this batch:  0.6127
+Accuracy for this batch:  0.6334
+Accuracy for this batch:  0.6443
+Accuracy for this batch:  0.5844
+Accuracy for this batch:  0.6463
+Accuracy for this batch:  0.6033
+Accuracy for this batch:  0.6942
+Accuracy for this batch:  0.6254
+Accuracy for this batch:  0.5859
+Accuracy for this batch:  0.5412
+Accuracy for this batch:  0.6355
+Accuracy for this batch:  0.5541
+Accuracy for this batch:  0.5987
+Epoch time: 4.254688024520874
+-------------------------------------------------------
+>> EPOCH: 3 <<
+Accuracy for this batch:  0.5656
+Accuracy for this batch:  0.6079
+Accuracy for this batch:  0.5665
+Accuracy for this batch:  0.5416
+Accuracy for this batch:  0.5972
+Accuracy for this batch:  0.6163
+Accuracy for this batch:  0.565
+Accuracy for this batch:  0.5474
+Accuracy for this batch:  0.5852
+Accuracy for this batch:  0.5573
+Accuracy for this batch:  0.5363
+Accuracy for this batch:  0.5141
+Accuracy for this batch:  0.5526
+Accuracy for this batch:  0.5968
+Accuracy for this batch:  0.5444
+Accuracy for this batch:  0.5333
+Accuracy for this batch:  0.484
+Accuracy for this batch:  0.5696
+Accuracy for this batch:  0.5565
+Accuracy for this batch:  0.5458
+Accuracy for this batch:  0.5037
+Accuracy for this batch:  0.5562
+Accuracy for this batch:  0.4863
+Accuracy for this batch:  0.5274
+Accuracy for this batch:  0.5184
+Accuracy for this batch:  0.5477
+Accuracy for this batch:  0.5214
+Accuracy for this batch:  0.5465
+Accuracy for this batch:  0.5249
+Accuracy for this batch:  0.5256
+Epoch time: 4.304489612579346
+-------------------------------------------------------
+>> EPOCH: 4 <<
+Accuracy for this batch:  0.526
+Accuracy for this batch:  0.578
+Accuracy for this batch:  0.5668
+Accuracy for this batch:  0.5172
+Accuracy for this batch:  0.5654
+Accuracy for this batch:  0.5686
+Accuracy for this batch:  0.5237
+Accuracy for this batch:  0.5842
+Accuracy for this batch:  0.6185
+Accuracy for this batch:  0.6359
+Accuracy for this batch:  0.5679
+Accuracy for this batch:  0.6246
+Accuracy for this batch:  0.5806
+Accuracy for this batch:  0.6264
+Accuracy for this batch:  0.5573
+Accuracy for this batch:  0.6022
+Accuracy for this batch:  0.6728
+Accuracy for this batch:  0.6272
+Accuracy for this batch:  0.604
+Accuracy for this batch:  0.6556
+Accuracy for this batch:  0.6436
+Accuracy for this batch:  0.6484
+Accuracy for this batch:  0.5839
+Accuracy for this batch:  0.6871
+Accuracy for this batch:  0.6553
+Accuracy for this batch:  0.6277
+Accuracy for this batch:  0.6497
+Accuracy for this batch:  0.7043
+Accuracy for this batch:  0.636
+Accuracy for this batch:  0.6046
+Epoch time: 4.117273569107056
+-------------------------------------------------------
+>> EPOCH: 5 <<
+Accuracy for this batch:  0.6556
+Accuracy for this batch:  0.7053
+Accuracy for this batch:  0.6466
+Accuracy for this batch:  0.662
+Accuracy for this batch:  0.6359
+Accuracy for this batch:  0.6439
+Accuracy for this batch:  0.6449
+Accuracy for this batch:  0.6632
+Accuracy for this batch:  0.6685
+Accuracy for this batch:  0.6259
+Accuracy for this batch:  0.6369
+Accuracy for this batch:  0.6575
+Accuracy for this batch:  0.6444
+Accuracy for this batch:  0.6418
+Accuracy for this batch:  0.6673
+Accuracy for this batch:  0.6631
+Accuracy for this batch:  0.6535
+Accuracy for this batch:  0.6899
+Accuracy for this batch:  0.6264
+Accuracy for this batch:  0.6553
+Accuracy for this batch:  0.6454
+Accuracy for this batch:  0.6665
+Accuracy for this batch:  0.6449
+Accuracy for this batch:  0.6279
+Accuracy for this batch:  0.6553
+Accuracy for this batch:  0.6453
+Accuracy for this batch:  0.62
+Accuracy for this batch:  0.6149
+Accuracy for this batch:  0.6345
+Accuracy for this batch:  0.6246
+Epoch time: 4.227277755737305
+-------------------------------------------------------
+>> EPOCH: 6 <<
+Accuracy for this batch:  0.6078
+Accuracy for this batch:  0.6155
+Accuracy for this batch:  0.5986
+Accuracy for this batch:  0.5412
+Accuracy for this batch:  0.5974
+Accuracy for this batch:  0.5786
+Accuracy for this batch:  0.56
+Accuracy for this batch:  0.584
+Accuracy for this batch:  0.5551
+Accuracy for this batch:  0.6274
+Accuracy for this batch:  0.6071
+Accuracy for this batch:  0.6148
+Accuracy for this batch:  0.5896
+Accuracy for this batch:  0.5822

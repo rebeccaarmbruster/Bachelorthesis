@@ -1,0 +1,18 @@
+LSTM Units: 50
+LSTM Layers: 2
+Dense Units: 500
+Dense Layers: 2
+Num epochs: 15
+Learn rate: 0.001
+Batch size: 100
+L2 Reg: 0.0
+RNG Seed: 364
+Dropout Wrapper: True
+Several dense layers: tf.layers.dense AND all tf.layers.dropout
+Loss via sequence mask: False
+Shuffle: False
+Keep prob: 0.5
+Iterations: 5
+Savings iterations: 5
+-------------------------------------------------------
+>> EPOCH: 1 <<

@@ -1,0 +1,77 @@
+LSTM Units: 50
+LSTM Layers: 2
+Dense Units: 500
+Dense Layers: 2
+Num epochs: 15
+Learn rate: 0.001
+Batch size: 100
+L2 Reg: 0.0
+RNG Seed: 364
+Dropout Wrapper: True
+Several dense layers: tf.layers.dense AND all tf.layers.dropout
+Loss via sequence mask: False
+Shuffle: False
+Keep prob: 0.5
+Iterations: 5
+Savings iterations: 5
+-------------------------------------------------------
+>> EPOCH: 1 <<
+Accuracy for this batch:  0.9492
+Accuracy for this batch:  0.9578
+Accuracy for this batch:  0.9493
+Accuracy for this batch:  0.9342
+Accuracy for this batch:  0.9129
+Accuracy for this batch:  0.8992
+Accuracy for this batch:  0.8897
+Accuracy for this batch:  0.8722
+Accuracy for this batch:  0.8656
+Accuracy for this batch:  0.8628
+Accuracy for this batch:  0.8539
+Accuracy for this batch:  0.8544
+Accuracy for this batch:  0.8339
+Accuracy for this batch:  0.8556
+Accuracy for this batch:  0.8597
+Accuracy for this batch:  0.8496
+Accuracy for this batch:  0.8557
+Accuracy for this batch:  0.8564
+Accuracy for this batch:  0.8561
+Accuracy for this batch:  0.8644
+Accuracy for this batch:  0.8625
+Accuracy for this batch:  0.869
+Accuracy for this batch:  0.8623
+Accuracy for this batch:  0.8689
+Accuracy for this batch:  0.8666
+Accuracy for this batch:  0.8684
+Accuracy for this batch:  0.8591
+Accuracy for this batch:  0.8726
+Accuracy for this batch:  0.8628
+Accuracy for this batch:  0.8769
+Epoch time: 4.768137216567993
+-------------------------------------------------------
+>> EPOCH: 2 <<
+Accuracy for this batch:  0.8599
+Accuracy for this batch:  0.8661
+Accuracy for this batch:  0.8737
+Accuracy for this batch:  0.8673
+Accuracy for this batch:  0.8652
+Accuracy for this batch:  0.8599
+Accuracy for this batch:  0.8573
+Accuracy for this batch:  0.8577
+Accuracy for this batch:  0.859
+Accuracy for this batch:  0.8598
+Accuracy for this batch:  0.8525
+Accuracy for this batch:  0.8576
+Accuracy for this batch:  0.835
+Accuracy for this batch:  0.8483
+Accuracy for this batch:  0.8564
+Accuracy for this batch:  0.8525
+Accuracy for this batch:  0.853
+Accuracy for this batch:  0.8525
+Accuracy for this batch:  0.8562
+Accuracy for this batch:  0.8558
+Accuracy for this batch:  0.8538
+Accuracy for this batch:  0.861
+Accuracy for this batch:  0.8563
+Accuracy for this batch:  0.8555
+Accuracy for this batch:  0.8572
+Accuracy for this batch:  0.8595

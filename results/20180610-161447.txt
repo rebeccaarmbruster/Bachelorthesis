@@ -1,0 +1,63 @@
+LSTM Units: 50
+LSTM Layers: 2
+Dense Units: 500
+Dense Layers: 2
+Num epochs: 15
+Learn rate: 0.001
+Batch size: 100
+L2 Reg: 0.0
+RNG Seed: 364
+Dropout Wrapper: True
+Several dense layers: tf.layers.dense AND all tf.layers.dropout
+Loss via sequence mask: False
+Shuffle: False
+Keep prob: 0.5
+Iterations: 5
+Savings iterations: 5
+-------------------------------------------------------
+>> EPOCH: 1 <<
+Accuracy for this batch:  0.0199
+Accuracy for this batch:  0.1092
+Accuracy for this batch:  0.04
+Accuracy for this batch:  0.0
+Accuracy for this batch:  0.03
+Accuracy for this batch:  0.0697
+Accuracy for this batch:  0.099
+Accuracy for this batch:  0.1395
+Accuracy for this batch:  0.14
+Accuracy for this batch:  0.1488
+Accuracy for this batch:  0.189
+Accuracy for this batch:  0.1999
+Accuracy for this batch:  0.1983
+Accuracy for this batch:  0.2367
+Accuracy for this batch:  0.2479
+Accuracy for this batch:  0.2947
+Accuracy for this batch:  0.2884
+Accuracy for this batch:  0.3561
+Accuracy for this batch:  0.4182
+Accuracy for this batch:  0.4049
+Accuracy for this batch:  0.4069
+Accuracy for this batch:  0.3464
+Accuracy for this batch:  0.4469
+Accuracy for this batch:  0.3788
+Accuracy for this batch:  0.4588
+Accuracy for this batch:  0.4778
+Accuracy for this batch:  0.5025
+Accuracy for this batch:  0.5073
+Accuracy for this batch:  0.4475
+Accuracy for this batch:  0.5056
+Epoch time: 5.058373928070068
+-------------------------------------------------------
+>> EPOCH: 2 <<
+Accuracy for this batch:  0.5067
+Accuracy for this batch:  0.5584
+Accuracy for this batch:  0.4589
+Accuracy for this batch:  0.5668
+Accuracy for this batch:  0.505
+Accuracy for this batch:  0.5187
+Accuracy for this batch:  0.474
+Accuracy for this batch:  0.4879
+Accuracy for this batch:  0.5385
+Accuracy for this batch:  0.5388
+Accuracy for this batch:  0.5085
+Accuracy for this batch:  0.504

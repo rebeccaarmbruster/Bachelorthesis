@@ -1,0 +1,3 @@
+model_checkpoint_path: "pretrained_lstm.ckpt"
+all_model_checkpoint_paths: "..\\saved-models\\20180610-160739.ckpt-14"
+all_model_checkpoint_paths: "pretrained_lstm.ckpt"
