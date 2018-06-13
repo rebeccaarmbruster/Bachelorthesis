@@ -217,12 +217,13 @@ elif loss_calculations == "Categorical cross entropy":
     loss *= rmdmask # average loss pro branch (doppelte tweets und Elemente kürzerer Tweets ausschließen mit mask ausschließen); average pro branch
     # loss = tf.reduce_sum(loss, 1) / (tf.reduce_sum(mask, 1) - (1 - tf.reduce_sum(rmdmask, 1)))
     # if tf.reduce_sum(rmdmask, 1) != 0:
-    #     loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(rmdmask, 1)
+    loss = tf.Print(input_=loss, data=[loss], message="Loss Prev", summarize=100)
+    loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(rmdmask, 1)
     # loss = tf.reduce_mean(loss) # Noch überlegen
 else:
     print(loss_calculations)
 # ipdb.set_trace()
-loss = tf.Print(input_=loss, data=[loss], message="Loss", summarize=100)
+loss = tf.Print(input_=loss, data=[loss], message="Loss Post", summarize=100)
 # tf.summary.scalar('Loss', loss)
 print("Loss")
 
