@@ -7,16 +7,18 @@ import ipdb
 from tensorflow.python import debug as tf_debug
 
 # Training Data
-x_train = np.load("./saved_data/train/branch_arrays.npy")
-mask_train = np.load("./saved_data/train/mask.npy")
-y_train = np.load("./saved_data/train/padlabel.npy")
-rmdoublemask_train = np.load("./saved_data/train/rmdoublemask.npy")
+x_train = np.load("./saved_data/mod/train/branch_arrays.npy")
+mask_train = np.load("./saved_data/mod/train/mask.npy")
+y_train = np.load("./saved_data/mod/train/padlabel.npy")
+rmdoublemask_train = np.load("./saved_data/mod/train/rmdoublemask.npy")
+# bool_train = np.load("./saved_data/mod/train/bool.npy")
 
 # Dev Data
-x_dev = np.load("./saved_data/dev/branch_arrays.npy")
-mask_dev = np.load("./saved_data/dev/mask.npy")
-y_dev = np.load("./saved_data/dev/padlabel.npy")
-rmdoublemask_dev = np.load("./saved_data/dev/rmdoublemask.npy")
+x_dev = np.load("./saved_data/mod/dev/branch_arrays.npy")
+mask_dev = np.load("./saved_data/mod/dev/mask.npy")
+y_dev = np.load("./saved_data/mod/dev/padlabel.npy")
+rmdoublemask_dev = np.load("./saved_data/mod/dev/rmdoublemask.npy")
+# bool_dev = np.load("./saved_data/mod/dev/bool.npy")
 
 # Result file
 path_to_results_file = "./results"
@@ -34,8 +36,8 @@ l2reg = 0.0
 rng_seed = 364
 
 dropout_wrapper = True
-prediction_layers = "tf.layers.dense AND all tf.layers.dropout - softmax"
-loss_calculations = "Categorical cross entropy"
+prediction_layers = "tf.layers.dense AND all tf.layers.dropout"
+loss_calculations = "Softmax cross entropy with logits"
 shuffle = False
 keep_prob = 0.5
 training = True
@@ -101,6 +103,7 @@ def cost(predictions, labels):
     return tf.reduce_mean(cross_entropy)
 
 
+# def get_batches(x, y, mask, rmd, bool, mb_size, shuffle):
 def get_batches(x, y, mask, rmd, mb_size, shuffle):
     if shuffle:
         n_batches = len(x) // mb_size
@@ -109,12 +112,14 @@ def get_batches(x, y, mask, rmd, mb_size, shuffle):
         np.random.shuffle(indices)
         for i in range(0, len(x) - mb_size + 1, mb_size):
             excerpt = indices[i:i+mb_size]
+            # yield x[excerpt], y[excerpt], mask[excerpt], rmd[excerpt], bool[excerpt]
             yield x[excerpt], y[excerpt], mask[excerpt], rmd[excerpt]
     else:
         n_batches = len(x) // mb_size
         x, y = x[:n_batches * mb_size], y[:n_batches * mb_size]
         for i in range(0, len(x), mb_size):
-            yield x[i:i + mb_size], y[i:i + mb_size], mask[i:i+mb_size], rmd[i:i+mb_size]
+            # yield x[i:i + mb_size], y[i:i + mb_size], mask[i:i+mb_size], rmd[i:i+mb_size], bool[i:i+mb_size]
+            yield x[i:i + mb_size], y[i:i + mb_size], mask[i:i + mb_size], rmd[i:i + mb_size]
         # return x[0:mb_size], y[0:mb_size]
 
 
@@ -126,6 +131,7 @@ inputs = tf.placeholder(tf.float32, [mb_size, branch_length, tweet_length])
 labels = tf.placeholder(tf.float32, [mb_size, branch_length, num_classes])
 mask = tf.placeholder(tf.float32, [mb_size, branch_length])
 rmdmask = tf.placeholder(tf.float32, [mb_size, branch_length])
+# bool = tf.placeholder(tf.bool, [mb_size])
 
 # LSTM Cell
 def lstm_cell():
@@ -215,15 +221,18 @@ elif loss_calculations == "Categorical cross entropy":
     loss = tf.contrib.keras.backend.categorical_crossentropy(output=scores, target=labels)
     loss *= mask
     loss *= rmdmask # average loss pro branch (doppelte tweets und Elemente kürzerer Tweets ausschließen mit mask ausschließen); average pro branch
-    # loss = tf.reduce_sum(loss, 1) / (tf.reduce_sum(mask, 1) - (1 - tf.reduce_sum(rmdmask, 1)))
     # if tf.reduce_sum(rmdmask, 1) != 0:
-    loss = tf.Print(input_=loss, data=[loss], message="Loss Prev", summarize=100)
-    loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(rmdmask, 1)
+    # loss = tf.Print(input_=loss, data=[loss], message="Loss Prev", summarize=100)
+    # loss = tf.where(bool, (tf.reduce_sum(loss, 1) / tf.reduce_sum(rmdmask, 1)), (tf.reduce_sum(loss, 1)))
     # loss = tf.reduce_mean(loss) # Noch überlegen
 else:
     print(loss_calculations)
 # ipdb.set_trace()
+loss = tf.Print(input_=loss, data=[loss], message="Loss Prev", summarize=100)
+# loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(mask, 1)
+loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(rmdmask, 1)
 loss = tf.Print(input_=loss, data=[loss], message="Loss Post", summarize=100)
+# ipdb.set_trace()
 # tf.summary.scalar('Loss', loss)
 print("Loss")
 
@@ -288,16 +297,22 @@ with tf.Session() as sess:
             print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
         with open(weights_bias, 'a') as out:
             print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        # for batch in get_batches(x=x_train, y=y_train, mask=mask_train, rmd=rmdoublemask_train, bool=bool_train, mb_size=mb_size, shuffle=shuffle):
         for batch in get_batches(x=x_train, y=y_train, mask=mask_train, rmd=rmdoublemask_train, mb_size=mb_size, shuffle=shuffle):
+            # x_batch, y_batch, mask_batch, rmd_batch, bool_batch = batch
             x_batch, y_batch, mask_batch, rmd_batch = batch
-            sess.run(fetches=optimizer, feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            # sess.run(fetches=optimizer, feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch, bool: bool_batch})
+            sess.run(fetches=optimizer,
+                     feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             variable_names = [v.name for v in tf.trainable_variables()]
             values = sess.run(variable_names)
             for k, v in zip(variable_names, values):
                 with open(weights_bias, 'a') as out:
                     print(k, v, file=out)
+            # accuracy_run, loss_run = sess.run(fetches=[accuracy, loss], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch, bool: bool_batch})
             accuracy_run, loss_run = sess.run(fetches=[accuracy, loss], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             # accuracy_run, loss_run, merged_run = sess.run(fetches=[accuracy, loss, merged], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            # loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch, bool: bool_batch})
             loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             # writer_train.add_summary(merged_run, epoch)
             with open(results, 'a') as out:
@@ -316,15 +331,19 @@ with tf.Session() as sess:
         with open(weights_bias, 'a') as out:
             print("-----------------------\nStart evaluation on dev data", file=out)
         saver.restore(sess=sess, save_path=tf.train.latest_checkpoint(path_to_saved_models))
+        # for batch in get_batches(x=x_dev, y=y_dev, mask=mask_dev, rmd=rmdoublemask_dev, bool=bool_dev, mb_size=mb_size, shuffle=shuffle):
         for batch in get_batches(x=x_dev, y=y_dev, mask=mask_dev, rmd=rmdoublemask_dev, mb_size=mb_size, shuffle=shuffle):
+            # x_batch, y_batch, mask_batch, rmd_batch, bool_batch = batch
             x_batch, y_batch, mask_batch, rmd_batch = batch
             variable_names = [v.name for v in tf.trainable_variables()]
             values = sess.run(variable_names)
             for k, v in zip(variable_names, values):
                 with open(weights_bias, 'a') as out:
                     print(k, v, file=out)
+            # accuracy_run, loss_run = sess.run([accuracy, loss], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch, bool: bool_batch})
             accuracy_run, loss_run = sess.run([accuracy, loss], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             # accuracy_run, optimizer_run, loss_run, merged_run = sess.run([accuracy, optimizer, loss, merged], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            # loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch, bool: bool_batch})
             loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             # writer_dev.add_summary(merged_run, epoch)
             with open(results, 'a') as out:
