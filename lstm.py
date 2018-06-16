@@ -29,15 +29,15 @@ lstm_units = 100
 lstm_layers = 2
 dense_units = 500
 dense_layers = 2
-num_epochs = 5
+num_epochs = 30
 learn_rate = 0.001
 mb_size = 100
 l2reg = 0.0
 rng_seed = 364
 
 dropout_wrapper = True
-prediction_layers = "tf.layers.dense AND all tf.layers.dropout"
-loss_calculations = "Softmax cross entropy with logits"
+prediction_layers = "tf.layers.dense AND all tf.layers.dropout - softmax"
+loss_calculations = "Categorical cross entropy"
 shuffle = False
 keep_prob = 0.5
 training = True
@@ -53,6 +53,7 @@ saving = 5
 # Helper functions
 def write_parameters(results):
     with open(results, 'a+') as out:
+        print("Loss über jeden Batch gemittelt", file=out)
         print("LSTM Units: " + str(lstm_units), file=out)
         print("LSTM Layers: " + str(lstm_layers), file=out)
         print("Dense Units: " + str(dense_units), file=out)
@@ -176,8 +177,8 @@ elif prediction_layers == "tf.layers.dense AND all tf.layers.dropout":
     scores = tf.layers.dropout(hidden_2, rate=keep_prob, training=training)
 
 elif prediction_layers == "tf.layers.dense AND all tf.layers.dropout - softmax":
-    lstm_output_drop = tf.layers.dropout(inputs=outputs, rate=keep_prob, training=training)
-    hidden_1 = tf.layers.dense(inputs=lstm_output_drop, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
+    # lstm_output_drop = tf.layers.dropout(inputs=outputs, rate=keep_prob, training=training)
+    hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
     hidden_1_drop = tf.layers.dropout(inputs=hidden_1, rate=keep_prob, training=training)
     hidden_2 = tf.layers.dense(inputs=hidden_1_drop, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
     hidden_2_drop = tf.layers.dropout(hidden_2, rate=keep_prob, training=training)
@@ -231,6 +232,7 @@ else:
 loss = tf.Print(input_=loss, data=[loss], message="Loss Prev", summarize=100)
 # loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(mask, 1)
 loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(rmdmask, 1)
+loss = tf.reduce_mean(loss)
 loss = tf.Print(input_=loss, data=[loss], message="Loss Post", summarize=100)
 # ipdb.set_trace()
 # tf.summary.scalar('Loss', loss)
@@ -242,8 +244,8 @@ print("Optimizer")
 
 # Evaluation
 predictions = tf.cast(tf.argmax(scores, 2), tf.float32)
-# predictions *= mask
-# predictions *= rmdmask
+predictions *= mask
+predictions *= rmdmask
 predictions = tf.Print(input_=predictions, data=[predictions], message="Predictions", summarize=100)
 # correct_pred = tf.equal(tf.cast(predictions, tf.float32), labels)
 # masked_labels = tf.cast(tf.argmax(labels, 2), tf.float32)
@@ -251,10 +253,12 @@ predictions = tf.Print(input_=predictions, data=[predictions], message="Predicti
 # masked_labels *= rmdmask
 # correct_pred = tf.cast(tf.equal(predictions, masked_labels), tf.float32)
 correct_pred = tf.cast(tf.equal(predictions, tf.cast(tf.argmax(labels, 2), tf.float32)), tf.float32)
+correct_pred *= mask
+correct_pred *= rmdmask
 correct_pred = tf.Print(input_=correct_pred, data=[correct_pred], message="Correct Pred", summarize=100)
-# correct_pred *= mask
-# correct_pred *= rmdmask
-accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+# accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+accuracy = tf.reduce_sum(correct_pred, 1) / tf.reduce_sum(rmdmask, 1)
+accuracy = tf.reduce_mean(accuracy, 0)
 # accuracy = tf.reduce_sum(correct_pred, 0) / (tf.reduce_sum(mask, 0) - (1 - tf.reduce_sum(rmdmask, 0)))
 # tf.summary.scalar('Accuracy', accuracy)
 # ipdb.set_trace()
