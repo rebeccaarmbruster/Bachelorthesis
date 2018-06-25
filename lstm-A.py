@@ -34,7 +34,7 @@ lstm_units = 100
 lstm_layers = 2
 dense_units = 500
 dense_layers = 2
-num_epochs = 3
+num_epochs = 30
 learn_rate = 0.001
 mb_size = 100
 l2reg = 0.0
@@ -173,13 +173,8 @@ accuracy = tf.reduce_sum(correct_pred, 1) / tf.reduce_sum(rmdmask, 1)
 accuracy = tf.reduce_mean(accuracy, 0)
 print("Accuracy")
 
-# Prepare files for results, weights+biases and saved models
-# result_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".txt")
-# results = os.path.join(path_to_results_file, result_file).replace(os.path.sep, '/')
 saved_model_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".ckpt")
 save_path = os.path.join(path_to_saved_models, saved_model_file).replace(os.path.sep, '/')
-# weights_bias_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-weights-bias.txt")
-# weights_bias = os.path.join(path_to_results_file, weights_bias_file).replace(os.path.sep, '/')
 accuracy_dev_batch_file = os.path.join(path_to_results_file, "accuracy_dev_batch.txt").replace(os.path.sep, '/')
 accuracy_dev_epoch_file = os.path.join(path_to_results_file, "accuracy_dev_epoch.txt").replace(os.path.sep, '/')
 accuracy_train_batch_file = os.path.join(path_to_results_file, "accuracy_train_batch.txt").replace(os.path.sep, '/')
@@ -216,11 +211,7 @@ with tf.Session() as sess:
         loss_dev = 0
         count_dev = 0
         start_epoch_time = time.time()
-        print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<")
-        # with open(results, 'a') as out:
-        #     print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
-        # with open(weights_bias, 'a') as out:
-        #     print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs))
         for batch in utils.get_batches(x=x_train, y=y_train, mask=mask_train, rmd=rmdoublemask_train, mb_size=mb_size, shuffle=shuffle, rng_seed=rng_seed):
             x_batch, y_batch, mask_batch, rmd_batch = batch
             sess.run(fetches=optimizer, feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
@@ -244,11 +235,6 @@ with tf.Session() as sess:
                 print(epoch, ";", count_train, ":", predictions_run, file=out)
             np.save(os.path.join(predictions_folder_train, str(epoch) + "-" + str(count_train)), predictions_run)
         print("Save model")
-        # with open(results, 'a') as out:
-        #     print("Training accuracy for this epoch:", (accuracy_train / count_train), file=out)
-        #     print("Training loss for this epoch:", loss_train, file=out)
-        #     print("Average training loss for this epoch:", (loss_train / count_train), file=out)
-        #     print("Save model", file=out)
         with open(accuracy_train_epoch_file, 'a') as out:
             print(epoch, ":", (accuracy_train / count_train), file=out)
         with open(loss_train_epoch_file, 'a') as out:
@@ -258,10 +244,6 @@ with tf.Session() as sess:
         # Evaluation on dev data
         training = False
         print("Start evaluation on dev data")
-        # with open(results, 'a') as out:
-        #     print("-----------------------\nStart evaluation on dev data", file=out)
-        # with open(weights_bias, 'a') as out:
-        #     print("-----------------------\nStart evaluation on dev data", file=out)
         saver.restore(sess=sess, save_path=tf.train.latest_checkpoint(path_to_saved_models))
         for batch in utils.get_batches(x=x_dev, y=y_dev, mask=mask_dev, rmd=rmdoublemask_dev, mb_size=mb_size, shuffle=shuffle, rng_seed=rng_seed):
             x_batch, y_batch, mask_batch, rmd_batch = batch
@@ -289,11 +271,4 @@ with tf.Session() as sess:
             print(epoch, ":", (accuracy_dev / count_dev), file=out)
         with open(loss_dev_epoch_file, 'a') as out:
             print(epoch, ":", (loss_dev / count_dev), file=out)
-        # with open(results, 'a') as out:
-        #     print("Averagy dev accuracy for this epoch:", (accuracy_dev / count_dev), file=out)
-        #     print("Dev loss for this epoch:", loss_dev, file=out)
-        #     print("Average dev loss for this epoch:", (loss_dev / count_dev), file=out)
-        #     print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
-        # with open(weights_bias, 'a') as out:
-        #     print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
     print("Done")
