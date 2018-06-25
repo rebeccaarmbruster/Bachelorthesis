@@ -20,15 +20,21 @@ y_dev = np.load("./saved_data/A/mod/dev/padlabel.npy")
 rmdoublemask_dev = np.load("./saved_data/A/mod/dev/rmdoublemask.npy")
 
 # Result file
-path_to_results_file = "./results/A"
-path_to_saved_models = "./saved-models/A"
+date_folder = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+results_folder = "D:/Zwischenablage/results/A"
+saved_models_folder = "D:/Zwischenablage/saved-models/A"
+path_to_results_file = os.path.join(results_folder, date_folder).replace(os.path.sep, "/")
+path_to_saved_models = os.path.join(saved_models_folder, date_folder).replace(os.path.sep, "/")
+os.makedirs(path_to_results_file)
+os.makedirs(path_to_saved_models)
+
 
 # Parameters
 lstm_units = 100
 lstm_layers = 2
 dense_units = 500
 dense_layers = 2
-num_epochs = 30
+num_epochs = 3
 learn_rate = 0.001
 mb_size = 100
 l2reg = 0.0
@@ -47,10 +53,12 @@ num_classes = 4
 
 iterations = 5
 saving = 5
+np_print_threshold = False
 
 # Helper functions
 def write_parameters(results):
     with open(results, 'a+') as out:
+        print("Save predictions", file=out)
         print("LSTM Units: " + str(lstm_units), file=out)
         print("LSTM Layers: " + str(lstm_layers), file=out)
         print("Dense Units: " + str(dense_units), file=out)
@@ -92,7 +100,7 @@ initial_state = cells.zero_state(mb_size, tf.float32)
 print("Cells, InitialState")
 
 # Unrolling the network
-outputs, final_state = tf.nn.dynamic_rnn(cells, inputs, dtype=tf.float32, initial_state=initial_state)
+outputs, final_state = tf.nn.dynamic_rnn(cells, inputs, dtype=tf.float32, initial_state=initial_state, sequence_length=tf.reduce_sum(mask, 1))
 print("Outputs, FinalState")
 
 # Scores
@@ -116,12 +124,13 @@ elif prediction_layers == "tf.layers.dense AND all tf.layers.dropout":
 
 elif prediction_layers == "tf.layers.dense AND all tf.layers.dropout - softmax":
     # lstm_output_drop = tf.layers.dropout(inputs=outputs, rate=keep_prob, training=training)
-    hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
+    # hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
+    hidden_1 = tf.layers.dense(inputs=tf.reshape(outputs, [-1, lstm_units]), units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
     hidden_1_drop = tf.layers.dropout(inputs=hidden_1, rate=keep_prob, training=training)
     hidden_2 = tf.layers.dense(inputs=hidden_1_drop, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
     hidden_2_drop = tf.layers.dropout(hidden_2, rate=keep_prob, training=training)
     scores = tf.layers.dense(inputs=hidden_2_drop, units=num_classes, activation=tf.nn.softmax, use_bias=True, trainable=training)
-
+    scores = tf.reshape(scores, [mb_size, branch_length, num_classes])
 elif prediction_layers == "tf.layers.dense AND single tf.layers.dropout - softmax":
     hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu)
     hidden_1_norm = tf.layers.batch_normalization(inputs=hidden_1, training=training)
@@ -129,9 +138,9 @@ elif prediction_layers == "tf.layers.dense AND single tf.layers.dropout - softma
     hidden_2_norm = tf.layers.batch_normalization(inputs=hidden_2, training=training)
     hidden_2_norm_drop = tf.layers.dropout(inputs=hidden_2_norm, rate=keep_prob, training=training)
     scores = tf.layers.dense(inputs=hidden_2_norm_drop, units=num_classes, activation=tf.nn.softmax, use_bias=True, trainable=training)
-
 else:
     print(prediction_layers)
+# ipdb.set_trace()
 print("Scores")
 
 # Loss
@@ -158,21 +167,37 @@ print("Optimizer")
 # Evaluation
 predictions = tf.cast(tf.argmax(scores, 2), tf.float32)
 correct_pred = tf.cast(tf.equal(predictions, tf.cast(tf.argmax(labels, 2), tf.float32)), tf.float32)
-correct_pred *= mask
+# correct_pred *= mask
 correct_pred *= rmdmask
 accuracy = tf.reduce_sum(correct_pred, 1) / tf.reduce_sum(rmdmask, 1)
 accuracy = tf.reduce_mean(accuracy, 0)
 print("Accuracy")
 
 # Prepare files for results, weights+biases and saved models
-result_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".txt")
-results = os.path.join(path_to_results_file, result_file).replace(os.path.sep, '/')
+# result_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".txt")
+# results = os.path.join(path_to_results_file, result_file).replace(os.path.sep, '/')
 saved_model_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".ckpt")
 save_path = os.path.join(path_to_saved_models, saved_model_file).replace(os.path.sep, '/')
-weights_bias_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-weights-bias.txt")
-weights_bias = os.path.join(path_to_results_file, weights_bias_file).replace(os.path.sep, '/')
+# weights_bias_file = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-weights-bias.txt")
+# weights_bias = os.path.join(path_to_results_file, weights_bias_file).replace(os.path.sep, '/')
+accuracy_dev_batch_file = os.path.join(path_to_results_file, "accuracy_dev_batch.txt").replace(os.path.sep, '/')
+accuracy_dev_epoch_file = os.path.join(path_to_results_file, "accuracy_dev_epoch.txt").replace(os.path.sep, '/')
+accuracy_train_batch_file = os.path.join(path_to_results_file, "accuracy_train_batch.txt").replace(os.path.sep, '/')
+accuracy_train_epoch_file = os.path.join(path_to_results_file, "accuracy_train_epoch.txt").replace(os.path.sep, '/')
+loss_dev_batch_file = os.path.join(path_to_results_file, "loss_dev_batch.txt").replace(os.path.sep, '/')
+loss_dev_epoch_file = os.path.join(path_to_results_file, "loss_dev_epoch.txt").replace(os.path.sep, '/')
+loss_train_batch_file = os.path.join(path_to_results_file, "loss_train_batch.txt").replace(os.path.sep, '/')
+loss_train_epoch_file = os.path.join(path_to_results_file, "loss_train_epoch.txt").replace(os.path.sep, '/')
+predictions_dev_file = os.path.join(path_to_results_file, "predictions_dev.txt").replace(os.path.sep, '/')
+predictions_train_file = os.path.join(path_to_results_file, "predictions_train.txt").replace(os.path.sep, '/')
+parameters_file = os.path.join(path_to_results_file, "parameters.txt").replace(os.path.sep, '/')
+weights_bias_file = os.path.join(path_to_results_file, "weights_bias.txt").replace(os.path.sep, '/')
+predictions_folder_train = os.path.join(path_to_results_file, "predictions_train").replace(os.path.sep, '/')
+predictions_folder_dev = os.path.join(path_to_results_file, "predictions_dev").replace(os.path.sep, '/')
+os.makedirs(predictions_folder_train)
+os.makedirs(predictions_folder_dev)
 
-write_parameters(results)
+write_parameters(parameters_file)
 
 # Initialise variables
 init = tf.global_variables_initializer()
@@ -184,65 +209,91 @@ with tf.Session() as sess:
     saver = tf.train.Saver()
 
     for epoch in range(num_epochs):
+        accuracy_train = 0
         loss_train = 0
         count_train = 0
+        accuracy_dev = 0
         loss_dev = 0
         count_dev = 0
         start_epoch_time = time.time()
         print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<")
-        with open(results, 'a') as out:
-            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
-        with open(weights_bias, 'a') as out:
-            print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        # with open(results, 'a') as out:
+        #     print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
+        # with open(weights_bias, 'a') as out:
+        #     print(">>Epoch: " + str(epoch + 1) + "/" + str(num_epochs) + "<<", file=out)
         for batch in utils.get_batches(x=x_train, y=y_train, mask=mask_train, rmd=rmdoublemask_train, mb_size=mb_size, shuffle=shuffle, rng_seed=rng_seed):
             x_batch, y_batch, mask_batch, rmd_batch = batch
             sess.run(fetches=optimizer, feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             variable_names = [v.name for v in tf.trainable_variables()]
             values = sess.run(variable_names)
             for k, v in zip(variable_names, values):
-                with open(weights_bias, 'a') as out:
-                    print(k, v, file=out)
-            accuracy_run, loss_run = sess.run(fetches=[accuracy, loss], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+                with open(weights_bias_file, 'a') as out:
+                    print(epoch, ":", k, v, file=out)
+            accuracy_run, loss_run, predictions_run = sess.run(fetches=[accuracy, loss, predictions], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            accuracy_train += accuracy_run
             loss_train += loss_run
             count_train += 1
-            with open(results, 'a') as out:
-                print("Accuracy for this batch:", accuracy_run, file=out)
+            if np_print_threshold:
+                np.set_printoptions(threshold=np.nan)
+            with open(accuracy_train_batch_file, 'a') as out:
+                print(epoch, ";", count_train, ":", accuracy_run, file=out)
+            with open(loss_train_batch_file, 'a') as out:
+                print(epoch, ";", count_train, ":", loss_run, file=out)
+            with open(predictions_train_file, 'a') as out:
+                print(epoch, ";", count_train, ":", predictions_run, file=out)
+            np.save(os.path.join(predictions_folder_train, str(epoch) + "-" + str(count_train)), predictions_run)
         print("Save model")
-        with open(results, 'a') as out:
-            print("Training loss for this epoch:", loss_train, file=out)
-            print("Average training loss for this epoch:", (loss_train / count_train), file=out)
-            print("Save model", file=out)
+        # with open(results, 'a') as out:
+        #     print("Training accuracy for this epoch:", (accuracy_train / count_train), file=out)
+        #     print("Training loss for this epoch:", loss_train, file=out)
+        #     print("Average training loss for this epoch:", (loss_train / count_train), file=out)
+        #     print("Save model", file=out)
+        with open(accuracy_train_epoch_file, 'a') as out:
+            print(epoch, ":", (accuracy_train / count_train), file=out)
+        with open(loss_train_epoch_file, 'a') as out:
+            print(epoch, ":", (loss_train / count_train), file=out)
         saved = saver.save(sess=sess, save_path=save_path, global_step=epoch)
 
         # Evaluation on dev data
         training = False
         print("Start evaluation on dev data")
-        with open(results, 'a') as out:
-            print("-----------------------\nStart evaluation on dev data", file=out)
-        with open(weights_bias, 'a') as out:
-            print("-----------------------\nStart evaluation on dev data", file=out)
+        # with open(results, 'a') as out:
+        #     print("-----------------------\nStart evaluation on dev data", file=out)
+        # with open(weights_bias, 'a') as out:
+        #     print("-----------------------\nStart evaluation on dev data", file=out)
         saver.restore(sess=sess, save_path=tf.train.latest_checkpoint(path_to_saved_models))
         for batch in utils.get_batches(x=x_dev, y=y_dev, mask=mask_dev, rmd=rmdoublemask_dev, mb_size=mb_size, shuffle=shuffle, rng_seed=rng_seed):
             x_batch, y_batch, mask_batch, rmd_batch = batch
             variable_names = [v.name for v in tf.trainable_variables()]
             values = sess.run(variable_names)
             for k, v in zip(variable_names, values):
-                with open(weights_bias, 'a') as out:
+                with open(weights_bias_file, 'a') as out:
                     print(k, v, file=out)
-            accuracy_run, loss_run = sess.run([accuracy, loss], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            accuracy_run, loss_run, predictions_run = sess.run([accuracy, loss, predictions], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
+            accuracy_dev += accuracy_run
             loss_dev += loss_run
             count_dev += 1
-            with open(results, 'a') as out:
-                print("Accuracy for this batch:", accuracy_run, file=out)
+            with open(accuracy_dev_batch_file, 'a') as out:
+                print(epoch, ";", count_dev, ":", accuracy_run, file=out)
+            with open(loss_dev_batch_file, 'a') as out:
+                print(epoch, ";", count_dev, ":", loss_run, file=out)
+            with open(predictions_dev_file, 'a') as out:
+                print(epoch, ";", count_dev, ":", predictions_run, file=out)
+            np.save(os.path.join(predictions_folder_dev, str(epoch) + "-" + str(count_dev)), predictions_run)
         training = True
         stop_epoch_time = time.time()
         stop_epoch_time = stop_epoch_time - start_epoch_time
-        with open(results, 'a') as out:
-            print("Dev loss for this epoch:", loss_dev, file=out)
-            print("Average dev loss for this epoch:", (loss_dev / count_dev), file=out)
-            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
-        with open(weights_bias, 'a') as out:
-            print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+        with open(accuracy_dev_epoch_file, 'a') as out:
+            print(epoch, ":", (accuracy_dev / count_dev), file=out)
+        with open(loss_dev_epoch_file, 'a') as out:
+            print(epoch, ":", (loss_dev / count_dev), file=out)
+        # with open(results, 'a') as out:
+        #     print("Averagy dev accuracy for this epoch:", (accuracy_dev / count_dev), file=out)
+        #     print("Dev loss for this epoch:", loss_dev, file=out)
+        #     print("Average dev loss for this epoch:", (loss_dev / count_dev), file=out)
+        #     print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
+        # with open(weights_bias, 'a') as out:
+        #     print("Epoch time: " + str(stop_epoch_time) + "\n------------------------------------------------------", file=out)
     print("Done")
