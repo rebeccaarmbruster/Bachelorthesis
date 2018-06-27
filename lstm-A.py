@@ -4,6 +4,7 @@ import datetime
 import os
 import time
 import utils
+# import plots
 import ipdb
 from tensorflow.python import debug as tf_debug
 
@@ -34,7 +35,7 @@ lstm_units = 100
 lstm_layers = 2
 dense_units = 500
 dense_layers = 2
-num_epochs = 30
+num_epochs = 300
 learn_rate = 0.001
 mb_size = 100
 l2reg = 0.0
@@ -58,7 +59,7 @@ np_print_threshold = False
 # Helper functions
 def write_parameters(results):
     with open(results, 'a+') as out:
-        print("Save predictions", file=out)
+        print("Relevant changes: Test plot", file=out)
         print("LSTM Units: " + str(lstm_units), file=out)
         print("LSTM Layers: " + str(lstm_layers), file=out)
         print("Dense Units: " + str(dense_units), file=out)
@@ -231,6 +232,7 @@ with tf.Session() as sess:
                 print(epoch, ";", count_train, ":", accuracy_run, file=out)
             with open(loss_train_batch_file, 'a') as out:
                 print(epoch, ";", count_train, ":", loss_run, file=out)
+                # print(loss_run, file=out)
             with open(predictions_train_file, 'a') as out:
                 print(epoch, ";", count_train, ":", predictions_run, file=out)
             np.save(os.path.join(predictions_folder_train, str(epoch) + "-" + str(count_train)), predictions_run)
@@ -239,6 +241,7 @@ with tf.Session() as sess:
             print(epoch, ":", (accuracy_train / count_train), file=out)
         with open(loss_train_epoch_file, 'a') as out:
             print(epoch, ":", (loss_train / count_train), file=out)
+            # print((loss_train / count_train), file=out)
         saved = saver.save(sess=sess, save_path=save_path, global_step=epoch)
 
         # Evaluation on dev data
@@ -249,9 +252,9 @@ with tf.Session() as sess:
             x_batch, y_batch, mask_batch, rmd_batch = batch
             variable_names = [v.name for v in tf.trainable_variables()]
             values = sess.run(variable_names)
-            for k, v in zip(variable_names, values):
-                with open(weights_bias_file, 'a') as out:
-                    print(k, v, file=out)
+            # for k, v in zip(variable_names, values):
+            #     with open(weights_bias_file, 'a') as out:
+            #         print(k, v, file=out)
             accuracy_run, loss_run, predictions_run = sess.run([accuracy, loss, predictions], feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             loss_eval = loss.eval(feed_dict={inputs: x_batch, labels: y_batch, mask: mask_batch, rmdmask: rmd_batch})
             accuracy_dev += accuracy_run
@@ -261,6 +264,7 @@ with tf.Session() as sess:
                 print(epoch, ";", count_dev, ":", accuracy_run, file=out)
             with open(loss_dev_batch_file, 'a') as out:
                 print(epoch, ";", count_dev, ":", loss_run, file=out)
+                # print(loss_run, file=out)
             with open(predictions_dev_file, 'a') as out:
                 print(epoch, ";", count_dev, ":", predictions_run, file=out)
             np.save(os.path.join(predictions_folder_dev, str(epoch) + "-" + str(count_dev)), predictions_run)
@@ -271,4 +275,10 @@ with tf.Session() as sess:
             print(epoch, ":", (accuracy_dev / count_dev), file=out)
         with open(loss_dev_epoch_file, 'a') as out:
             print(epoch, ":", (loss_dev / count_dev), file=out)
+            # print((loss_dev / count_dev), file=out)
+
+    # plots.plot_data(set="train", metric="accuracy", path=path_to_results_file, file=accuracy_train_epoch_file)
+    # plots.plot_data(set="dev", metric="accuracy", path=path_to_results_file, file=accuracy_dev_epoch_file)
+    # plots.plot_data(set="train", metric="loss", path=path_to_results_file, file=loss_train_epoch_file)
+    # plots.plot_data(set="dev", metric="loss", path=path_to_results_file, file=loss_dev_epoch_file)
     print("Done")
