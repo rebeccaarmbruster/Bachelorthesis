@@ -9,15 +9,15 @@ from tensorflow.python import debug as tf_debug
 
 # Training Data
 x_train = np.load("./saved_data/B/mod/train/branch_arrays.npy")
-mask_train = np.load("./saved_data/B/mod/train/mask.npy")
-y_train = np.load("./saved_data/B/mod/train/padlabel.npy")
-rmdoublemask_train = np.load("./saved_data/B/mod/train/rmdoublemask.npy")
+mask_train = np.load("./saved_data/B/1d/train/mask.npy")
+y_train = np.load("./saved_data/B/1d/train/padlabel.npy")
+rmdoublemask_train = np.load("./saved_data/B/1d/train/rmdoublemask.npy")
 
 # Dev Data
 x_dev = np.load("./saved_data/B/mod/dev/branch_arrays.npy")
-mask_dev = np.load("./saved_data/B/mod/dev/mask.npy")
-y_dev = np.load("./saved_data/B/mod/dev/padlabel.npy")
-rmdoublemask_dev = np.load("./saved_data/B/mod/dev/rmdoublemask.npy")
+mask_dev = np.load("./saved_data/B/1d/dev/mask.npy")
+y_dev = np.load("./saved_data/B/1d/dev/padlabel.npy")
+rmdoublemask_dev = np.load("./saved_data/B/1d/dev/rmdoublemask.npy")
 
 # Result file
 # path_to_results_file = "./results/B"
@@ -35,10 +35,10 @@ lstm_units = 100
 lstm_layers = 2
 dense_units = 500
 dense_layers = 2
-num_epochs = 100
+num_epochs = 50
 learn_rate = 0.001
-mb_size = 10
-l2reg = 0.0
+mb_size = 100
+l2reg = 0.001
 rng_seed = 364
 
 dropout_wrapper = True
@@ -59,6 +59,7 @@ np_print_threshold = False
 # Helper functions
 def write_parameters(results):
     with open(results, 'a+') as out:
+        print("Relevant changes: Majority accuracy", file=out)
         print("LSTM Units: " + str(lstm_units), file=out)
         print("LSTM Layers: " + str(lstm_layers), file=out)
         print("Dense Units: " + str(dense_units), file=out)
@@ -77,14 +78,26 @@ def write_parameters(results):
         print("Savings iterations: " + str(saving), file=out)
         print("-------------------------------------------------------", file=out)
 
+
+def extract_axis_1(data, ind):
+    batch_range = tf.range(tf.shape(data)[0])
+    indices = tf.stack([batch_range, ind], axis=1)
+    res = tf.gather_nd(data, indices)
+    return res
+
+
 # Create default graph
 tf.reset_default_graph()
 
 # Declare variables
 inputs = tf.placeholder(tf.float32, [mb_size, branch_length, tweet_length])
-labels = tf.placeholder(tf.float32, [mb_size, branch_length, num_classes])
-mask = tf.placeholder(tf.float32, [mb_size, branch_length])
-rmdmask = tf.placeholder(tf.float32, [mb_size, branch_length])
+# labels = tf.placeholder(tf.float32, [mb_size, branch_length, num_classes])
+labels = tf.placeholder(tf.float32, [mb_size, num_classes])
+# mask = tf.placeholder(tf.float32, [mb_size, branch_length])
+mask = tf.placeholder(tf.float32, [mb_size])
+# rmdmask = tf.placeholder(tf.float32, [mb_size, branch_length])
+rmdmask = tf.placeholder(tf.float32, [mb_size])
+# lengths = tf.placeholder(tf.int32, [mb_size])
 
 # LSTM Cell
 def lstm_cell():
@@ -100,7 +113,9 @@ initial_state = cells.zero_state(mb_size, tf.float32)
 print("Cells, InitialState")
 
 # Unrolling the network
-outputs, final_state = tf.nn.dynamic_rnn(cells, inputs, dtype=tf.float32, initial_state=initial_state, sequence_length=tf.reduce_sum(mask, 1))
+# outputs, final_state = tf.nn.dynamic_rnn(cells, inputs, dtype=tf.float32, initial_state=initial_state, sequence_length=tf.reduce_sum(mask, 1))
+outputs, final_state = tf.nn.dynamic_rnn(cells, inputs, dtype=tf.float32, initial_state=initial_state)
+outputs = extract_axis_1(outputs, tf.cast((mask - 1), dtype=tf.int32))
 print("Outputs, FinalState")
 
 # Scores
@@ -124,13 +139,14 @@ elif prediction_layers == "tf.layers.dense AND all tf.layers.dropout":
 
 elif prediction_layers == "tf.layers.dense AND all tf.layers.dropout - softmax":
     # lstm_output_drop = tf.layers.dropout(inputs=outputs, rate=keep_prob, training=training)
-    # hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
-    hidden_1 = tf.layers.dense(inputs=tf.reshape(outputs, [-1, lstm_units]), units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
+    hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
+    # hidden_1 = tf.layers.dense(inputs=tf.reshape(outputs, [-1, lstm_units]), units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
+    # hidden_1 = tf.layers.dense(inputs=tf.reshape(outputs, [-1, lstm_units]), units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training, activity_regularizer=tf.contrib.layers.l2_regularizer(scale=l2reg))
     hidden_1_drop = tf.layers.dropout(inputs=hidden_1, rate=keep_prob, training=training)
-    hidden_2 = tf.layers.dense(inputs=hidden_1_drop, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training)
+    hidden_2 = tf.layers.dense(inputs=hidden_1_drop, units=dense_units, activation=tf.nn.relu, use_bias=True, trainable=training, activity_regularizer=tf.contrib.layers.l2_regularizer(scale=l2reg))
     hidden_2_drop = tf.layers.dropout(hidden_2, rate=keep_prob, training=training)
-    scores = tf.layers.dense(inputs=hidden_2_drop, units=num_classes, activation=tf.nn.softmax, use_bias=True, trainable=training)
-    scores = tf.reshape(scores, [mb_size, branch_length, num_classes])
+    scores = tf.layers.dense(inputs=hidden_2_drop, units=num_classes, activation=tf.nn.softmax, use_bias=True, trainable=training, activity_regularizer=tf.contrib.layers.l2_regularizer(scale=l2reg))
+    # scores = tf.reshape(scores, [mb_size, branch_length, num_classes])
 elif prediction_layers == "tf.layers.dense AND single tf.layers.dropout - softmax":
     hidden_1 = tf.layers.dense(inputs=outputs, units=dense_units, activation=tf.nn.relu)
     hidden_1_norm = tf.layers.batch_normalization(inputs=hidden_1, training=training)
@@ -142,7 +158,7 @@ elif prediction_layers == "tf.layers.dense AND single tf.layers.dropout - softma
 else:
     print(prediction_layers)
 print("Scores")
-
+# ipdb.set_trace()
 # Loss
 if loss_calculations == "Softmax cross entropy with logits":
     loss = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=scores)
@@ -154,9 +170,9 @@ elif loss_calculations == "Categorical cross entropy":
     loss = tf.contrib.keras.backend.categorical_crossentropy(output=scores, target=labels)
 else:
     print(loss_calculations)
-loss *= mask
+# loss *= mask
 # loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(rmdmask, 1)
-loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(mask, 1)
+# loss = tf.reduce_sum(loss, 1) / tf.reduce_sum(mask, 1)
 loss = tf.reduce_mean(loss)
 # ipdb.set_trace()
 print("Loss")
@@ -166,13 +182,13 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learn_rate).minimize(loss)
 print("Optimizer")
 
 # Evaluation
-predictions = tf.cast(tf.argmax(scores, 2), tf.float32)
-correct_pred = tf.cast(tf.equal(predictions, tf.cast(tf.argmax(labels, 2), tf.float32)), tf.float32)
-correct_pred *= mask
+predictions = tf.cast(tf.argmax(scores, 1), tf.float32)
+correct_pred = tf.cast(tf.equal(predictions, tf.cast(tf.argmax(labels, 1), tf.float32)), tf.float32)
+# correct_pred *= mask
 # correct_pred *= rmdmask
 # accuracy = tf.reduce_sum(correct_pred, 1) / tf.reduce_sum(rmdmask, 1)
-accuracy = tf.reduce_sum(correct_pred, 1) / tf.reduce_sum(mask, 1)
-accuracy = tf.reduce_mean(accuracy, 0)
+accuracy = tf.reduce_sum(correct_pred, 0) / tf.reduce_sum(mask, 0)
+# accuracy = tf.reduce_mean(accuracy, 0)
 print("Accuracy")
 
 
@@ -228,10 +244,13 @@ with tf.Session() as sess:
             accuracy_train += accuracy_run
             loss_train += loss_run
             count_train += 1
+            # maj_accuracy = utils.get_majority_accuracy(labels=y_batch, predictions=predictions_run, rmdoublemask=rmd_batch)
+            # accuracy_train += maj_accuracy
             if np_print_threshold:
                 np.set_printoptions(threshold=np.nan)
             with open(accuracy_train_batch_file, 'a') as out:
                 print(epoch, ";", count_train, ":", accuracy_run, file=out)
+                # print(epoch, ";", count_train, ":", maj_accuracy, file=out)
             with open(loss_train_batch_file, 'a') as out:
                 print(epoch, ";", count_train, ":", loss_run, file=out)
                 # print(loss_run, file=out)
@@ -262,8 +281,11 @@ with tf.Session() as sess:
             accuracy_dev += accuracy_run
             loss_dev += loss_run
             count_dev += 1
+            # maj_accuracy = utils.get_majority_accuracy(labels=y_batch, predictions=predictions_run, rmdoublemask=rmd_batch)
+            # accuracy_dev += maj_accuracy
             with open(accuracy_dev_batch_file, 'a') as out:
                 print(epoch, ";", count_dev, ":", accuracy_run, file=out)
+                # print(epoch, ";", count_dev, ":", maj_accuracy, file=out)
             with open(loss_dev_batch_file, 'a') as out:
                 print(epoch, ";", count_dev, ":", loss_run, file=out)
                 # print(loss_run, file=out)
